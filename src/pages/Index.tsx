@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from "@/hooks/useAuth";
 import DashboardHeader from "@/components/DashboardHeader";
 import PrayerTracker from "@/components/PrayerTracker";
 import TaskManager from "@/components/TaskManager";
@@ -9,6 +11,30 @@ import MotivationalQuote from "@/components/MotivationalQuote";
 import ProgressOverview from "@/components/ProgressOverview";
 
 const Index = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-peaceful">
       {/* Background pattern overlay */}

@@ -1,10 +1,14 @@
-import { useState } from "react";
-import { Moon, Sun, Settings, User, Bell } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Moon, Sun, Settings, Bell, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const DashboardHeader = () => {
   const [isDark, setIsDark] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const currentDate = new Date();
   const dateString = currentDate.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -17,6 +21,17 @@ const DashboardHeader = () => {
     setIsDark(!isDark);
     document.documentElement.classList.toggle('dark');
   };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border">
@@ -49,6 +64,10 @@ const DashboardHeader = () => {
 
           {/* Actions */}
           <div className="flex items-center space-x-2">
+            <span className="text-sm text-muted-foreground hidden md:block">
+              Welcome, {user?.email || 'User'}
+            </span>
+            
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-4 w-4" />
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-gentle-pulse" />
@@ -67,8 +86,8 @@ const DashboardHeader = () => {
               <Settings className="h-4 w-4" />
             </Button>
 
-            <Button variant="ghost" size="icon">
-              <User className="h-4 w-4" />
+            <Button variant="ghost" size="icon" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>

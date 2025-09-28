@@ -3,34 +3,52 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Clock, MapPin } from "lucide-react";
+import { useActivities } from '@/hooks/useActivities';
+import { useToast } from '@/hooks/use-toast';
 
-interface Prayer {
-  id: string;
-  name: string;
-  arabicName: string;
-  time: string;
-  completed: boolean;
-}
+const prayersData = [
+  { name: 'Fajr', arabicName: 'الفجر', time: '5:30 AM' },
+  { name: 'Dhuhr', arabicName: 'الظهر', time: '12:15 PM' },
+  { name: 'Asr', arabicName: 'العصر', time: '3:45 PM' },
+  { name: 'Maghrib', arabicName: 'المغرب', time: '6:20 PM' },
+  { name: 'Isha', arabicName: 'العشاء', time: '7:45 PM' },
+];
 
 const PrayerTracker = () => {
-  const [prayers, setPrayers] = useState<Prayer[]>([
-    { id: 'fajr', name: 'Fajr', arabicName: 'الفجر', time: '5:30 AM', completed: false },
-    { id: 'dhuhr', name: 'Dhuhr', arabicName: 'الظهر', time: '12:15 PM', completed: true },
-    { id: 'asr', name: 'Asr', arabicName: 'العصر', time: '3:45 PM', completed: false },
-    { id: 'maghrib', name: 'Maghrib', arabicName: 'المغرب', time: '6:20 PM', completed: false },
-    { id: 'isha', name: 'Isha', arabicName: 'العشاء', time: '7:45 PM', completed: false },
-  ]);
+  const { activities, addActivity, completeActivity, getTodayActivities } = useActivities();
+  const { toast } = useToast();
 
-  const completedCount = prayers.filter(p => p.completed).length;
-  const completionPercentage = (completedCount / prayers.length) * 100;
+  const todayPrayers = getTodayActivities().filter(activity => activity.activity_type === 'prayer');
 
-  const togglePrayer = (prayerId: string) => {
-    setPrayers(prev => prev.map(prayer => 
-      prayer.id === prayerId 
-        ? { ...prayer, completed: !prayer.completed }
-        : prayer
-    ));
+  const isPrayerCompleted = (prayerName: string) => {
+    return todayPrayers.some(activity => 
+      activity.activity_name === prayerName && activity.completed
+    );
   };
+
+  const togglePrayer = async (prayerName: string, arabicName: string) => {
+    const existingPrayer = todayPrayers.find(activity => activity.activity_name === prayerName);
+    
+    if (existingPrayer && !existingPrayer.completed) {
+      await completeActivity(existingPrayer.id);
+      toast({
+        title: "Prayer Completed",
+        description: `${prayerName} (${arabicName}) has been marked as completed.`,
+      });
+    } else if (!existingPrayer) {
+      const newPrayer = await addActivity('prayer', prayerName, { arabicName });
+      if (newPrayer) {
+        await completeActivity(newPrayer.id);
+        toast({
+          title: "Prayer Completed",
+          description: `${prayerName} (${arabicName}) has been completed.`,
+        });
+      }
+    }
+  };
+
+  const completedCount = todayPrayers.filter(p => p.completed).length;
+  const completionPercentage = (completedCount / prayersData.length) * 100;
 
   return (
     <Card className="bg-gradient-spiritual shadow-spiritual animate-fade-in">
@@ -72,38 +90,42 @@ const PrayerTracker = () => {
 
         {/* Prayer List */}
         <div className="space-y-3">
-          {prayers.map((prayer) => (
-            <div 
-              key={prayer.id}
-              className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 hover:bg-muted/50 ${
-                prayer.completed ? 'bg-success/10 border border-success/20' : 'border border-border'
-              }`}
-            >
-              <Checkbox
-                checked={prayer.completed}
-                onCheckedChange={() => togglePrayer(prayer.id)}
-                className="data-[state=checked]:bg-success data-[state=checked]:border-success"
-              />
-              
-              <div className="flex-1">
-                <div className="flex items-center space-x-2">
-                  <span className={`font-medium ${prayer.completed ? 'text-success line-through' : ''}`}>
-                    {prayer.name}
-                  </span>
+          {prayersData.map((prayer) => {
+            const isCompleted = isPrayerCompleted(prayer.name);
+            
+            return (
+              <div 
+                key={prayer.name}
+                className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 hover:bg-muted/50 ${
+                  isCompleted ? 'bg-success/10 border border-success/20' : 'border border-border'
+                }`}
+              >
+                <Checkbox
+                  checked={isCompleted}
+                  onCheckedChange={() => togglePrayer(prayer.name, prayer.arabicName)}
+                  className="data-[state=checked]:bg-success data-[state=checked]:border-success"
+                />
+                
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2">
+                    <span className={`font-medium ${isCompleted ? 'text-success line-through' : ''}`}>
+                      {prayer.name}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {prayer.arabicName}
+                    </span>
+                  </div>
                   <span className="text-sm text-muted-foreground">
-                    {prayer.arabicName}
+                    {prayer.time}
                   </span>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {prayer.time}
-                </span>
-              </div>
 
-              {prayer.completed && (
-                <span className="text-success animate-scale-in">✓</span>
-              )}
-            </div>
-          ))}
+                {isCompleted && (
+                  <span className="text-success animate-scale-in">✓</span>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Completion Message */}

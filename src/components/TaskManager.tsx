@@ -4,44 +4,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, Flag } from "lucide-react";
-
-interface Task {
-  id: string;
-  text: string;
-  completed: boolean;
-  priority: 'high' | 'medium' | 'low';
-  dueDate?: string;
-}
+import { Plus, Calendar, Flag, Trash2 } from "lucide-react";
+import { useActivities } from '@/hooks/useActivities';
+import { useToast } from '@/hooks/use-toast';
 
 const TaskManager = () => {
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: '1', text: 'Complete React assignment', completed: false, priority: 'high', dueDate: 'Today' },
-    { id: '2', text: 'Read 20 pages of Islamic history', completed: true, priority: 'medium' },
-    { id: '3', text: 'Plan weekend schedule', completed: false, priority: 'low', dueDate: 'Tomorrow' },
-  ]);
-  
   const [newTask, setNewTask] = useState('');
+  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
+  const { activities, addActivity, completeActivity, deleteActivity, getActivitiesByType } = useActivities();
+  const { toast } = useToast();
 
-  const addTask = () => {
+  const tasks = getActivitiesByType('task');
+  
+  const addTask = async () => {
     if (newTask.trim()) {
-      const task: Task = {
-        id: Date.now().toString(),
-        text: newTask,
-        completed: false,
-        priority: 'medium'
-      };
-      setTasks([task, ...tasks]);
+      await addActivity('task', newTask, { priority });
       setNewTask('');
+      setPriority('medium');
+      toast({
+        title: "Task Added",
+        description: "Your task has been added successfully.",
+      });
     }
   };
 
-  const toggleTask = (taskId: string) => {
-    setTasks(tasks.map(task => 
-      task.id === taskId 
-        ? { ...task, completed: !task.completed }
-        : task
-    ));
+  const toggleTask = async (id: string) => {
+    await completeActivity(id);
+    toast({
+      title: "Task Completed",
+      description: "Great job on completing your task!",
+    });
+  };
+
+  const removeTask = async (id: string) => {
+    await deleteActivity(id);
+    toast({
+      title: "Task Deleted",
+      description: "Your task has been removed.",
+    });
   };
 
   const getPriorityColor = (priority: string) => {
@@ -71,17 +71,28 @@ const TaskManager = () => {
 
       <CardContent className="space-y-4">
         {/* Add New Task */}
-        <div className="flex space-x-2">
-          <Input
-            placeholder="Add a new task..."
-            value={newTask}
-            onChange={(e) => setNewTask(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addTask()}
-            className="flex-1"
-          />
-          <Button onClick={addTask} size="icon" variant="default">
-            <Plus className="h-4 w-4" />
-          </Button>
+        <div className="space-y-2">
+          <div className="flex space-x-2">
+            <Input
+              placeholder="Add a new task..."
+              value={newTask}
+              onChange={(e) => setNewTask(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addTask()}
+              className="flex-1"
+            />
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as 'high' | 'medium' | 'low')}
+              className="px-3 py-2 border rounded-md bg-background text-sm"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+            <Button onClick={addTask} size="icon" variant="default">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Task List */}
@@ -101,23 +112,28 @@ const TaskManager = () => {
               
               <div className="flex-1 min-w-0">
                 <p className={`text-sm ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                  {task.text}
+                  {task.activity_name}
                 </p>
                 <div className="flex items-center space-x-2 mt-1">
-                  <Flag className={`h-3 w-3 ${getPriorityColor(task.priority)}`} />
-                  <span className={`text-xs ${getPriorityColor(task.priority)}`}>
-                    {task.priority.toUpperCase()}
+                  <Flag className={`h-3 w-3 ${getPriorityColor(task.metadata?.priority || 'medium')}`} />
+                  <span className={`text-xs ${getPriorityColor(task.metadata?.priority || 'medium')}`}>
+                    {(task.metadata?.priority || 'medium').toUpperCase()}
                   </span>
-                  {task.dueDate && (
-                    <>
-                      <Calendar className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">
-                        {task.dueDate}
-                      </span>
-                    </>
-                  )}
+                  <Calendar className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(task.created_at).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => removeTask(task.id)}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           ))}
         </div>

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useActivities } from '@/hooks/useActivities';
 
 interface ProgressItem {
   label: string;
@@ -10,11 +11,18 @@ interface ProgressItem {
 }
 
 const ProgressOverview = () => {
+  const { getTodayActivities, getActivitiesByType } = useActivities();
+  
+  const todayActivities = getTodayActivities();
+  const prayersCompleted = todayActivities.filter(a => a.activity_type === 'prayer' && a.completed).length;
+  const tasksCompleted = todayActivities.filter(a => a.activity_type === 'task' && a.completed).length;
+  const totalTasks = todayActivities.filter(a => a.activity_type === 'task').length;
+
   const progressItems: ProgressItem[] = [
-    { label: "Prayers", value: 1, max: 5, color: "text-primary", icon: "🕌" },
-    { label: "Study Tasks", value: 3, max: 8, color: "text-success", icon: "📚" },
-    { label: "Water Intake", value: 6, max: 8, color: "text-sky-500", icon: "💧" },
-    { label: "Gym Sessions", value: 2, max: 3, color: "text-orange-500", icon: "💪" },
+    { label: "Prayers", value: prayersCompleted, max: 5, color: "text-primary", icon: "🕌" },
+    { label: "Tasks", value: tasksCompleted, max: Math.max(totalTasks, 5), color: "text-success", icon: "✅" },
+    { label: "Study Time", value: 2, max: 5, color: "text-sky-500", icon: "📚" },
+    { label: "Activities", value: todayActivities.filter(a => a.completed).length, max: Math.max(todayActivities.length, 5), color: "text-orange-500", icon: "🎯" },
   ];
 
   return (
@@ -52,7 +60,9 @@ const ProgressOverview = () => {
 
         {/* Daily Score */}
         <div className="mt-6 p-4 bg-gradient-primary rounded-lg text-primary-foreground text-center">
-          <div className="text-2xl font-bold">72%</div>
+          <div className="text-2xl font-bold">
+            {todayActivities.length > 0 ? Math.round((todayActivities.filter(a => a.completed).length / todayActivities.length) * 100) : 0}%
+          </div>
           <div className="text-sm opacity-90">Daily Score</div>
         </div>
       </CardContent>
